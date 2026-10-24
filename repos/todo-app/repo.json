@@ -1,0 +1,5 @@
+{
+  "path": "/Users/shanmunivi/Downloads/todo-app",
+  "testCommand": "npm test",
+  "setupCommand": ""
+}

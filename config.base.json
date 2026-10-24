@@ -1,0 +1,99 @@
+{
+  "$comment": "Agentic delivery runner config. Paths are relative to the repo root.",
+  "schema": "agentic-sdlc",
+  "baseBranch": null,
+  "useWorktrees": true,
+  "worktreeDir": ".agentic/worktrees",
+  "setupCommand": "",
+  "testCommand": "npm test",
+  "extraChecks": [],
+  "trace": {
+    "testPaths": ["test", "tests", "src", "spec", "__tests__"],
+    "testFilePattern": "(\\.test\\.|\\.spec\\.|_test\\.|(^|/)test_)",
+    "requireTestPlanMention": true
+  },
+  "maxApplyPasses": 3,
+  "maxFixAttempts": 2,
+  "autoFixReviewBlocking": true,
+  "parallelArtifacts": true,
+  "agent": {
+    "command": "claude",
+    "permissionMode": "acceptEdits",
+    "permissionPrompts": "none",
+    "maxBudgetUsdPerRun": 5,
+    "timeoutMinutes": 45,
+    "effort": null
+  },
+  "roles": {
+    "product-analyst": {
+      "model": "opus",
+      "allowedTools": ["Read", "Write", "Edit", "Glob", "Grep", "WebSearch", "WebFetch", "Bash(openspec *)"]
+    },
+    "spec-author": {
+      "model": "opus",
+      "allowedTools": ["Read", "Write", "Edit", "Glob", "Grep", "Bash(openspec *)"]
+    },
+    "architect": {
+      "model": "opus",
+      "allowedTools": ["Read", "Write", "Edit", "Glob", "Grep", "Bash(openspec *)", "Bash(git log *)"]
+    },
+    "security-reviewer": {
+      "model": "opus",
+      "allowedTools": ["Read", "Write", "Edit", "Glob", "Grep", "Bash(openspec *)"]
+    },
+    "test-strategist": {
+      "model": "sonnet",
+      "allowedTools": ["Read", "Write", "Edit", "Glob", "Grep", "Bash(openspec *)"]
+    },
+    "planner": {
+      "model": "sonnet",
+      "allowedTools": ["Read", "Write", "Edit", "Glob", "Grep", "Bash(openspec *)"]
+    },
+    "implementer": {
+      "model": "sonnet",
+      "allowedTools": ["Read", "Write", "Edit", "Glob", "Grep", "Bash(openspec *)", "Bash(npm *)", "Bash(npx *)", "Bash(node *)", "Bash(git status*)", "Bash(git diff*)"]
+    },
+    "verifier": {
+      "model": "sonnet",
+      "allowedTools": ["Read", "Write", "Edit", "Glob", "Grep", "Bash(openspec *)", "Bash(npm *)", "Bash(npx *)", "Bash(node *)"]
+    },
+    "code-reviewer": {
+      "model": "opus",
+      "allowedTools": ["Read", "Write", "Glob", "Grep", "Bash(git diff*)", "Bash(git log*)", "Bash(openspec *)"]
+    },
+    "retrospective": {
+      "model": "sonnet",
+      "allowedTools": ["Read", "Write", "Edit", "Glob", "Grep", "Bash(git log*)", "Bash(openspec *)"]
+    }
+  },
+  "artifactRoles": {
+    "research": "product-analyst",
+    "proposal": "product-analyst",
+    "specs": "spec-author",
+    "design": "architect",
+    "threat-model": "security-reviewer",
+    "test-plan": "test-strategist",
+    "tasks": "planner",
+    "verification": "verifier",
+    "retrospective": "retrospective"
+  },
+  "stages": [
+    { "id": "intent", "title": "Discover and propose", "artifacts": ["research", "proposal"], "gate": "G1" },
+    { "id": "design", "title": "Specify, design and threat-model", "artifacts": ["specs", "design", "threat-model", "test-plan"], "gate": "G2" },
+    { "id": "build", "title": "Plan, build and verify", "artifacts": ["tasks"], "apply": true, "checks": true, "after": ["verification"], "review": true, "gate": "G3" },
+    { "id": "release", "title": "Learn and release", "artifacts": ["retrospective"], "gate": "G4", "archive": true }
+  ],
+  "gates": {
+    "G1": { "name": "Proposal", "label": "Proposal approval", "policy": { "low": "human", "medium": "human", "high": "human" }, "approvers": [] },
+    "G2": { "name": "Design", "label": "Design review", "policy": { "low": "auto", "medium": "human", "high": "human" }, "approvers": [] },
+    "G3": { "name": "Merge", "label": "Merge approval", "policy": { "low": "human", "medium": "human", "high": "human" }, "approvers": [] },
+    "G4": { "name": "Release", "label": "Release approval", "policy": { "low": "auto", "medium": "human", "high": "human" }, "approvers": [] }
+  },
+  "merge": {
+    "strategy": "no-ff",
+    "push": false,
+    "removeWorktree": true,
+    "deleteBranch": false
+  },
+  "notifyCommand": ""
+}

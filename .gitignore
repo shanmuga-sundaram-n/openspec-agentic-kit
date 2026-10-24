@@ -1,0 +1,9 @@
+worktrees/
+state/
+data/
+runs/
+tmp/
+.DS_Store
+node_modules/
+initiatives/
+.agentic/

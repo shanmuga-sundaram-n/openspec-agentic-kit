@@ -1,0 +1,42 @@
+schema: agentic-sdlc
+
+# Injected into every artifact's instructions. Replace the placeholders.
+# Keep it to constraints an agent cannot infer by reading the code (limit 50 KB).
+context: |
+  Product: <one line on what the system does and for whom>
+  Stack: <languages, frameworks, datastores, cloud>
+  Architecture notes: <link to docs/architecture or a few key facts>
+  Conventions: <API style, error format, time zones, idempotency, logging>
+  Testing: <framework, where tests live, how to run them>
+  Definition of done: every scenario has a passing named test, openspec validate --strict is clean,
+    no new high or critical findings in lint or security scans
+
+# Injected only into the matching artifact.
+rules:
+  research:
+    - Cite evidence (ticket, metric, incident) for the problem, or say none was found
+  proposal:
+    - Declare "Risk tier: low|medium|high" with a one-line justification
+    - Include non-goals, rollback plan and affected teams
+  specs:
+    - Every requirement name starts with a stable ID (AREA-NNN) and has at least one negative scenario
+    - Reuse existing capability paths under openspec/specs before creating new ones
+  design:
+    - One ADR block per decision (ADR-NNN) with status, owner, options table (pros and cons), outcome, consequences and confirmation
+    - Every ADR links the requirement IDs it serves and names the test or check that confirms it
+    - Fill the Boundaries table; the threat model builds on it
+    - Mermaid sequence diagram for any flow crossing a service boundary
+  threat-model:
+    - Classify every new data field (public, internal, confidential, restricted)
+    - Give each gap an ID and a proposed disposition (fix now, or defer to a named change) so the G2 approver can accept it by ID
+  test-plan:
+    - Test names embed the requirement ID without its hyphen, e.g. PAY012
+    - Map every threat-model control to a test or a named manual check
+  tasks:
+    - Failing test before implementation; each group lists the files it touches
+
+operations:
+  apply:
+    guidance:
+      - Work test-first and tick a task only after its verification passes
+      - Never weaken or delete a test that maps to a scenario
