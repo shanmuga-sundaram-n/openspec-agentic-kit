@@ -32,6 +32,7 @@ repos/<name>/
   agents/*.md              optional: replace a role prompt for this repo only
 state/ runs/ .agentic/worktrees/   runtime data, keyed by repo (git-ignored; location set by `worktreeDir`)
 data/agentic.db            SQLite store the dashboard reads (git-ignored)
+test/                      node:test suite: unit/, integration/, helpers/, fixtures/ (see Tests)
 ```
 
 Config layers, last wins: `config.base.json`, `repos/<name>/repo.json`, `repos/<name>/overrides.json`. Objects merge key by key; arrays are replaced.
@@ -170,6 +171,30 @@ The spec-to-test trace requires every ADDED or MODIFIED requirement to have an I
 To use the Implementer's language toolchain, add its commands to `roles.implementer.allowedTools` and `roles.verifier.allowedTools`, e.g. `"Bash(pytest *)"`, `"Bash(go test *)"`, `"Bash(mvn *)"`.
 
 Notification examples: macOS `osascript -e "display notification \"$AGENTIC_MESSAGE\" with title \"agentic\""`, Linux `notify-send agentic "$AGENTIC_MESSAGE"`.
+
+## Tests
+
+```
+npm test             # unit and integration tests, offline, no model calls
+npm run test:unit    # unit tests only
+```
+
+The suite uses only `node:test` and `node:assert/strict`, so it adds no dependencies. `test/run.mjs` passes explicit file paths to `node --test`: a directory argument fails on Node 22, globs are missing on Node 20, and a bare `node --test` would also execute helpers and fixtures under `test/`.
+
+Integration tests run the real CLI against throwaway copies, with a stub instead of `claude`. They need the `openspec` CLI on `PATH` and skip with a reason when it is missing; unit tests do not need it. To run one file:
+
+```
+node --test test/integration/harness.test.mjs
+```
+
+- `test/helpers/hub.mjs` copies `bin/`, `lib/`, `agents/`, `schemas/` and the base config into a temp dir (so state, runs, repos and worktrees never touch the real hub), creates a temp git repo on `main`, and runs the copy's CLI as a child process. `createHub(t)` and `createTargetRepo(t)` clean up after the test.
+- `test/helpers/claude-stub.mjs` replaces `claude -p --agent <role>`. It reads the real prompt, writes canned artifacts from `test/fixtures/artifacts/`, and prints the JSON shape the runner parses (`test/fixtures/claude-output.sample.json`). `hub.addRepo(name, path)` points the repo's `agent.command` at it through `overrides.json`.
+- Set `hub.scenario` before a run to change what the stub does: `risk` (tier written into `proposal.md`), `cost`, `failTimes: { design: 2 }` (exit 1 for the first two calls), `skip: ['design']` (succeed without writing the file), `blockingReview: true | n` (reviewer reports a blocking finding, always or for the first n reviews).
+- Start every file that starts changes with `const SKIP = openspecMissing() ?? false;` and pass `{ skip: SKIP }`.
+
+To add a scenario, put it in `test/integration/` (files run in parallel; tests inside a file run one after another, so keep slow scenarios in separate files). Start from `setup(t, { risk, config, test })` in `test/helpers/scenario.mjs`, which returns `{ hub, target, name }`, then drive the CLI with `hub.run([...])` and assert on the output, `hub.state(repo, id)`, `approvals.md` or the target repo with `gitIn`. Agent prompts are logged under `runs/<repo>/<id>/` in the hub copy, so a test can assert on what an agent was told. An integration run of the whole suite takes about a minute; the unit tests take under a second.
+
+Test files are named `test/unit/<area>.test.mjs`. Name each test with the requirement id from `openspec/specs` with the hyphen removed (for example `REG002 arrays are replaced`, `GATE004 ...`), so the hub's own spec-to-test trace can see it.
 
 ## Notes
 

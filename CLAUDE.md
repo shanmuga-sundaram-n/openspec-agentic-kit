@@ -10,7 +10,16 @@ Constraints: Node 20.19+ (dashboard needs 22.13+ for `node:sqlite`); **do not ad
 
 ## Commands
 
-There is no build, lint, or test suite in this repo. Run the CLI directly:
+There is no build or lint step. Tests use only `node:test` (no dependencies):
+
+```
+npm test            # unit + integration (integration needs the `openspec` CLI and skips without it)
+npm run test:unit   # unit only, under a second
+```
+
+`test/run.mjs` passes explicit file paths to `node --test` (a directory argument fails on Node 22, globs are missing on Node 20). Integration tests run the real CLI from a temp copy of the hub against a temp git repo, with `test/helpers/claude-stub.mjs` in place of `claude`. Name tests with the requirement id minus the hyphen (`GATE004 ...`). Gate decisions live in `lib/gates.mjs` as pure functions because `bin/agentic.mjs` runs on import and cannot be imported by a test. See the Tests section of `README.md`.
+
+Run the CLI directly:
 
 ```
 node bin/agentic.mjs repo add <name> <path> --test "npm test" --setup "npm ci"

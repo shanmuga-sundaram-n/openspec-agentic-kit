@@ -9,7 +9,7 @@ The hub has no automated tests, yet it commits, merges and approves on a user's 
 - Add a test suite using only `node:test` and `node:assert`, run with `node --test`; no new dependencies.
 - Unit tests for config merge, `parseDeltaSpecs`/`specTrace`, `riskTier`, `reviewBlocking`, lesson parsing and `applyAccepted`, `slugify`, and gate policy and approver decisions.
 - Integration tests against a temporary git repo and a stub `claude` executable: start, gate, revise, resume, archive and merge without calling a real model.
-- Tests named for the baseline requirement IDs (`REG002`, `GATE001`, ...) so the hub passes its own spec-to-test trace.
+- Tests named for the baseline requirement IDs (`REG002`, `GATE001`, ...) so the hub's own spec-to-test trace can see them. This change traces the requirements it tests (config layering, gates, lessons, the stage loop, archive and merge, initiative gates, repo registration), 21 of the 49 baseline requirements. Tracing the rest, so the hub passes its own trace in full, is left to later changes; design.md lists them.
 - Add a `test` script in a root `package.json` (no dependencies) and document the command in `README.md` and `CLAUDE.md`.
 - Non-goals: coverage thresholds, CI provider setup, dashboard browser tests.
 

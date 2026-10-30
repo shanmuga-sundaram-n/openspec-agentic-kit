@@ -10,6 +10,7 @@ import * as checks from '../lib/checks.mjs';
 import * as hub from '../lib/hub.mjs';
 import * as store from '../lib/store.mjs';
 import * as lessons from '../lib/lessons.mjs';
+import { policyFor, isAutoApproved, isApprover, gateBlockers, revisionTargetIndex } from '../lib/gates.mjs';
 import { runAgent, artifactPrompt, applyPrompt, reviewPrompt, roleTitle } from '../lib/agent.mjs';
 import { C, say, step, ok, warn, fail, AgenticError, readJson, writeJson, slugify, nowStamp, shell, countLines, tail, runAsync } from '../lib/util.mjs';
 import { serve } from '../lib/dashboard.mjs';
@@ -315,24 +316,13 @@ function gateSummary(state, stage) {
   return files;
 }
 
-function gateBlockers(state, stage) {
-  const out = [];
-  if (stage.checks) for (const c of state.checks || []) if (!c.ok) out.push(`check failed: ${c.name}`);
-  if (stage.review) for (const b of state.reviewBlocking || []) out.push(`review: ${b}`);
-  return out;
-}
-
 function canApprove(stage) {
-  const allowed = config.gates[stage.gate].approvers || [];
-  if (!allowed.length) return true;
-  const { email } = git.user(ROOT);
-  return allowed.map(s => s.toLowerCase()).includes(email.toLowerCase());
+  return isApprover(config.gates[stage.gate].approvers, git.user(ROOT).email);
 }
 
 function startRevision(state, stage, feedback, targetStageId) {
   const stages = config.stages;
-  const target = stages.findIndex(s => s.id === (targetStageId || stage.id));
-  if (target < 0 || target > state.stageIndex) throw new AgenticError(`Cannot revise stage "${targetStageId}"; choose the current or an earlier stage.`);
+  const target = revisionTargetIndex(stages, state.stageIndex, stage.id, targetStageId);
   const by = git.user(ROOT);
   state.revision = { gate: stage.gate, gateLabel: config.gates[stage.gate].label, by: by.name, feedback, stage: stages[target].id, pendingStages: stages.slice(target, state.stageIndex + 1).map(s => s.id) };
   for (const s of stages.slice(target)) {
@@ -349,10 +339,10 @@ function startRevision(state, stage, feedback, targetStageId) {
 /** Returns 'approved' | 'revise' | 'paused' | 'aborted'. */
 async function gate(state, stage) {
   const g = config.gates[stage.gate];
-  const policy = g.policy[state.risk] || 'human';
+  const policy = policyFor(g, state.risk);
   const blockers = gateBlockers(state, stage);
 
-  if (policy === 'auto' && !blockers.length) {
+  if (isAutoApproved(policy, blockers)) {
     recordApproval(state, stage, 'auto-approved', 'agentic runner', `policy: ${state.risk} risk`);
     state.gates[stage.gate] = { status: 'auto', at: new Date().toISOString() };
     save(state);
